@@ -45,12 +45,9 @@ The required packages include:
 
 This project uses the [Real Life Violence Situations Dataset](https://www.kaggle.com/datasets/mohamedmustafa/real-life-violence-situations-dataset) from Kaggle.
 
-### Step 1: Configure Kaggle API
-
-This will:
-- Download the dataset from Kaggle
-- Organize videos into `data/raw/fight/` and `data/raw/nonfight/` folders
-- Display download statistics
+```bash
+python ./utils/download_dataset.py
+```
 
 Expected output structure:
 ```
@@ -63,7 +60,7 @@ data/raw/
 
 Process the raw videos into train/validation splits:
 ```bash
-python -m utils.video_processor --process
+python ./utils/video_processor.py
 ```
 
 This will:
@@ -145,41 +142,6 @@ python predict.py --video path/to/video.mp4
 python predict.py --video path/to/video.mp4 --model checkpoints/best_model.pth
 ```
 
-
-## Project Structure
-
-```
-fight_detection/
-├── config.py                 # Configuration and hyperparameters
-├── download_dataset.py       # Dataset download script
-├── train.py                  # Training script
-├── test.py                   # Evaluation script
-├── predict.py                # Single video inference
-├── requirements.txt          # Python dependencies
-│
-├── data/
-│   ├── raw/                  # Raw downloaded videos
-│   │   ├── fight/
-│   │   └── nonfight/
-│   └── processed/            # Preprocessed train/val splits
-│       ├── train/
-│       └── val/
-│
-├── models/
-│   ├── __init__.py
-│   └── model.py              # ViolenceDetector model definition
-│
-├── utils/
-│   ├── __init__.py
-│   ├── helpers.py            # Training utilities
-│   └── video_processor.py   # Video processing utilities
-│
-└── checkpoints/              # Saved models and visualizations
-    ├── best_model.pth
-    ├── training_curves.png
-    └── confusion_matrix.png
-```
-
 ## Model Details
 
 ### ViolenceDetector Architecture
@@ -219,10 +181,10 @@ Output: (batch, 2) [nonfight, fight]
 pip install -r requirements.txt
 
 # 2. Download and organize dataset
-python download_dataset.py
+python ./utils/download_dataset.py
 
 # 3. Preprocess videos into train/val splits
-python -m utils.video_processor --process
+python ./utils/video_processor.py
 
 # 4. Train the model
 python train.py
@@ -232,19 +194,6 @@ python test.py
 
 # 6. Run inference on new video
 python predict.py --video test_video.mp4
-```
-
-### Video Processing Utilities
-
-```bash
-# Get video information
-python -m utils.video_processor --info path/to/video.mp4
-
-# Validate video file
-python -m utils.video_processor --validate path/to/video.mp4
-
-# Extract frames for testing
-python -m utils.video_processor --extract path/to/video.mp4
 ```
 
 ## Configuration
@@ -269,27 +218,6 @@ DATA_RAW = "data/raw"
 DATA_PROCESSED = "data/processed"
 MODEL_SAVE_PATH = "checkpoints/best_model.pth"
 ```
-
-## Performance
-
-The model achieves competitive performance on the Real Life Violence Situations Dataset with efficient inference suitable for real-time applications.
-
-Training time (approximate):
-- ~5-10 minutes per epoch on modern GPU
-- ~20-30 epochs for convergence (with early stopping)
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CUDA out of memory**: Reduce batch size in `config.py`
-2. **Video loading errors**: Ensure videos are in supported formats (MP4, AVI, MOV, MKV)
-3. **Kaggle download fails**: Check Kaggle API credentials
-4. **Import errors**: Ensure all dependencies are installed: `pip install -r requirements.txt`
-
-## License
-
-This project is for educational and research purposes.
 
 ## Acknowledgments
 

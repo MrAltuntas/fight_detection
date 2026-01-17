@@ -23,10 +23,10 @@ MOBILENET_FEATURES = 1280  # MobileNetV2 output features
 
 # Training params
 BATCH_SIZE = 8
-EPOCHS = 10
+EPOCHS = 30
 LEARNING_RATE = 0.001
 TRAIN_SPLIT = 0.8
-PATIENCE = 5
+PATIENCE = 10
 
 # Class labels
 CLASSES = ["nonfight", "fight"]

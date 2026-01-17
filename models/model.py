@@ -38,7 +38,10 @@ class ViolenceDetector(nn.Module):
         x = x.contiguous().view(-1, 3, 224, 224)
 
         # 2. Extract features with pooling
-        x = self.features(x)       # (batch×16, 1280, 7, 7)
+        # Frozen CNN should always be in eval mode to use stable running stats
+        self.features.eval()
+        with torch.no_grad():
+            x = self.features(x)       # (batch×16, 1280, 7, 7)
         x = self.pool(x)           # (batch×16, 1280, 1, 1)
         x = x.flatten(1)           # (batch×16, 1280)
 

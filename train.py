@@ -42,7 +42,7 @@ def set_seed(seed: int = 42) -> None:
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
     cudnn.deterministic = True
-    cudnn.benchmark = False
+    cudnn.benchmark = True  # Optimize for fixed input size (pre-processed tensors)
 
 
 def train_one_epoch(

@@ -12,9 +12,6 @@ import shutil
 from pathlib import Path
 import config
 
-# Project paths
-PROJECT_ROOT = Path(__file__).parent
-DATA_RAW = PROJECT_ROOT / "data" / "raw"
 DATASET_NAME = "mohamedmustafa/real-life-violence-situations-dataset"
 
 
@@ -97,8 +94,9 @@ def organize_dataset(download_path):
     print(f"Found NonViolence folder: {nonviolence_dir}")
 
     # Copy files to proper locations
-    fight_dest = DATA_RAW / "fight"
-    nonfight_dest = DATA_RAW / "nonfight"
+    data_raw = Path(config.DATA_RAW)
+    fight_dest = data_raw / "fight"
+    nonfight_dest = data_raw / "nonfight"
 
     # Create destination folders if they don't exist
     fight_dest.mkdir(parents=True, exist_ok=True)
@@ -154,10 +152,11 @@ def main():
     print("DOWNLOAD COMPLETE!")
     print("=" * 60)
 
-    fight_videos = list((DATA_RAW / "fight").glob("*"))
-    nonfight_videos = list((DATA_RAW / "nonfight").glob("*"))
+    data_raw = Path(config.DATA_RAW)
+    fight_videos = list((data_raw / "fight").glob("*"))
+    nonfight_videos = list((data_raw / "nonfight").glob("*"))
 
-    print(f"\nDataset location: {DATA_RAW}")
+    print(f"\nDataset location: {data_raw}")
     print(f"  - Fight videos: {len(fight_videos)}")
     print(f"  - Non-fight videos: {len(nonfight_videos)}")
     print(f"  - Total: {len(fight_videos) + len(nonfight_videos)}")

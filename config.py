@@ -12,6 +12,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 # Paths
 DATA_RAW = os.path.join(PROJECT_ROOT, "data/raw")
 DATA_PROCESSED = os.path.join(PROJECT_ROOT, "data/processed")
+DATA_TENSORS = os.path.join(PROJECT_ROOT, "data/tensors")
 MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT, "checkpoints/best_model.pth")
 
 # Model params

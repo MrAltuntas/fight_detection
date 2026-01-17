@@ -12,14 +12,23 @@ from utils.video_processor import extract_frames
 class ViolenceDataset(Dataset):
     """PyTorch Dataset for violence detection videos."""
 
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, tensor_dir=None):
         """
         Args:
             root_dir: Path to train/ or val/ folder (contains fight/ and nonfight/)
             transform: Optional torchvision transforms. If None, uses default.
+            tensor_dir: Path to tensor directory. If None, auto-detects from config.
         """
         self.root_dir = root_dir
-        self.video_list = []
+        self.samples = []  # List of (path, label, is_tensor)
+
+        # Determine tensor directory (parallel structure to root_dir)
+        if tensor_dir is None:
+            # Extract split name (train/val) from root_dir
+            split_name = os.path.basename(root_dir)
+            self.tensor_dir = os.path.join(config.DATA_TENSORS, split_name)
+        else:
+            self.tensor_dir = tensor_dir
 
         # Default transform: convert to tensor and normalize with ImageNet stats
         # Note: Resize is handled by extract_frames() for efficiency
@@ -34,35 +43,51 @@ class ViolenceDataset(Dataset):
         else:
             self.transform = transform
 
-        # Scan subdirectories for videos
+        # Scan subdirectories for videos/tensors
         # label: 0=nonfight, 1=fight (matching config.CLASSES order)
         for label_idx, class_name in enumerate(config.CLASSES):
             class_dir = os.path.join(root_dir, class_name)
+            tensor_class_dir = os.path.join(self.tensor_dir, class_name)
+
             if not os.path.isdir(class_dir):
                 continue
 
             for video_file in os.listdir(class_dir):
                 if video_file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
                     video_path = os.path.join(class_dir, video_file)
-                    self.video_list.append((video_path, label_idx))
+
+                    # Check if pre-processed tensor exists
+                    tensor_name = os.path.splitext(video_file)[0] + '.pt'
+                    tensor_path = os.path.join(tensor_class_dir, tensor_name)
+
+                    if os.path.exists(tensor_path):
+                        # Use tensor (faster)
+                        self.samples.append((tensor_path, label_idx, True))
+                    else:
+                        # Fallback to video
+                        self.samples.append((video_path, label_idx, False))
 
     def __len__(self):
-        return len(self.video_list)
+        return len(self.samples)
 
     def __getitem__(self, idx):
-        video_path, label = self.video_list[idx]
+        path, label, is_tensor = self.samples[idx]
 
-        # Load frames from video (already resized and in RGB format)
-        frames = extract_frames(video_path, to_rgb=True)
+        if is_tensor:
+            # Load pre-processed tensor (fast path)
+            frames_tensor = torch.load(path, weights_only=True)
+        else:
+            # Fallback: Load frames from video (slow path)
+            frames = extract_frames(path, to_rgb=True)
 
-        # Apply transforms to each frame and stack
-        transformed_frames = []
-        for frame in frames:
-            frame_tensor = self.transform(frame)
-            transformed_frames.append(frame_tensor)
+            # Apply transforms to each frame and stack
+            transformed_frames = []
+            for frame in frames:
+                frame_tensor = self.transform(frame)
+                transformed_frames.append(frame_tensor)
 
-        # Stack frames: (num_frames, 3, img_size, img_size)
-        frames_tensor = torch.stack(transformed_frames, dim=0)
+            # Stack frames: (num_frames, 3, img_size, img_size)
+            frames_tensor = torch.stack(transformed_frames, dim=0)
 
         return frames_tensor, label
 

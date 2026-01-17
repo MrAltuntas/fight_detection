@@ -100,10 +100,14 @@ def organize_dataset(download_path):
     fight_dest = DATA_RAW / "fight"
     nonfight_dest = DATA_RAW / "nonfight"
 
+    # Create destination folders if they don't exist
+    fight_dest.mkdir(parents=True, exist_ok=True)
+    nonfight_dest.mkdir(parents=True, exist_ok=True)
+
     # Clear destination folders
     for dest in [fight_dest, nonfight_dest]:
-        if dest.exists():
-            for f in dest.iterdir():
+        for f in dest.iterdir():
+            if f.is_file():
                 f.unlink()
 
     # Copy Violence videos to fight/

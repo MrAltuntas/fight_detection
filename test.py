@@ -22,7 +22,7 @@ from sklearn.metrics import (
 import matplotlib.pyplot as plt
 
 import config
-from models import ViolenceDetector
+from models import ViolenceDetector, MobileNetBaseline
 from data.dataset import ViolenceDataset
 from torch.utils.data import DataLoader
 from utils.helpers import get_device, load_checkpoint
@@ -88,7 +88,8 @@ def plot_confusion_matrix(
     )
 
     # Rotate x labels
-    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right',
+             rotation_mode='anchor')
 
     # Add text annotations
     thresh = cm.max() / 2.0
@@ -106,12 +107,17 @@ def plot_confusion_matrix(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate violence detection model')
-    parser.add_argument('--model', type=str, default=config.MODEL_SAVE_PATH,
-                        help=f'Path to model checkpoint (default: {config.MODEL_SAVE_PATH})')
+    parser = argparse.ArgumentParser(description='Evaluate violence detection '
+                                                 'model')
+    parser.add_argument('--arch', type=str, default='lstm',
+                        choices=['lstm', 'baseline'],
+                        help='Model architecture: lstm (MobileNet+LSTM) or '
+                             'baseline (MobileNet only) - (default: lstm)')
     parser.add_argument('--data_dir', type=str, default=config.DATA_PROCESSED,
-                        help=f'Path to data directory (default: {config.DATA_PROCESSED})')
-    parser.add_argument('--split', type=str, default='val', choices=['train', 'val'],
+                        help=f'Path to data directory '
+                             f'(default: {config.DATA_PROCESSED})')
+    parser.add_argument('--split', type=str, default='val',
+                        choices=['train', 'val'],
                         help='Dataset split to evaluate (default: val)')
     parser.add_argument('--batch_size', type=int, default=config.BATCH_SIZE,
                         help=f'Batch size (default: {config.BATCH_SIZE})')
@@ -119,9 +125,14 @@ def main():
                         help='Number of data loading workers (default: 4)')
     args = parser.parse_args()
 
+    if args.arch == 'baseline':
+        model_path = config.BASELINE_MODEL_SAVE_PATH
+    else:
+        model_path = config.MODEL_SAVE_PATH
+
     # Check model exists
-    if not os.path.exists(args.model):
-        print(f"Error: Model checkpoint not found: {args.model}")
+    if not os.path.exists(model_path):
+        print(f"Error: Model checkpoint not found: {model_path}")
         print("Please train the model first using train.py")
         return
 
@@ -147,15 +158,21 @@ def main():
     print(f"Dataset size: {len(dataset)} samples")
 
     # Load model
-    print(f"Loading model from: {args.model}")
-    model = ViolenceDetector(
-        num_frames=config.NUM_FRAMES,
-        num_classes=config.NUM_CLASSES,
-        lstm_hidden=config.LSTM_HIDDEN
-    )
+    print(f"Loading model from: {model_path}")
+    if args.arch == 'baseline':
+        model = MobileNetBaseline(
+            num_frames=config.NUM_FRAMES,
+            num_classes=config.NUM_CLASSES
+        )
+    else:
+        model = ViolenceDetector(
+            num_frames=config.NUM_FRAMES,
+            num_classes=config.NUM_CLASSES,
+            lstm_hidden=config.LSTM_HIDDEN
+        )
     model = model.to(device)
 
-    metadata = load_checkpoint(model, args.model, device=device)
+    metadata = load_checkpoint(model, model_path, device=device)
     print(f"Loaded checkpoint from epoch {metadata['epoch']}")
     print(f"Checkpoint val_accuracy: {metadata['val_accuracy']:.4f}")
 
@@ -173,7 +190,7 @@ def main():
     print("\n" + "=" * 60)
     print("EVALUATION RESULTS")
     print("=" * 60)
-    print(f"\nOverall Metrics:")
+    print("\nOverall Metrics:")
     print(f"  Accuracy:  {accuracy:.4f}")
     print(f"  Precision: {precision:.4f}")
     print(f"  Recall:    {recall:.4f}")
@@ -193,17 +210,23 @@ def main():
     cm = confusion_matrix(labels, predictions)
     print("Confusion Matrix:")
     print("-" * 60)
-    print(f"              Predicted")
+    print("              Predicted")
     print(f"              {config.CLASSES[0]:<10} {config.CLASSES[1]:<10}")
     print(f"Actual {config.CLASSES[0]:<8} {cm[0][0]:<10} {cm[0][1]:<10}")
     print(f"       {config.CLASSES[1]:<8} {cm[1][0]:<10} {cm[1][1]:<10}")
 
     # Save confusion matrix plot
-    cm_path = os.path.join(os.path.dirname(args.model), 'confusion_matrix.png')
+    res_dir = os.path.join(config.RESULTS_DIR, args.arch)
+    os.makedirs(res_dir, exist_ok=True)
+    cm_path = os.path.join(res_dir, 'confusion_matrix.png')
     plot_confusion_matrix(cm, config.CLASSES, cm_path)
     print(f"\nConfusion matrix saved to: {cm_path}")
 
     print("=" * 60)
+
+    np.save(os.path.join(res_dir, "labels.npy"), np.array(labels))
+    np.save(os.path.join(res_dir, "preds.npy"),
+            np.array(predictions))
 
 
 if __name__ == "__main__":

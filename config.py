@@ -13,7 +13,10 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_RAW = os.path.join(PROJECT_ROOT, "data/raw")
 DATA_PROCESSED = os.path.join(PROJECT_ROOT, "data/processed")
 DATA_TENSORS = os.path.join(PROJECT_ROOT, "data/tensors")
-MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT, "checkpoints/best_model.pth")
+MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT, "checkpoints/best_model_lstm.pth")
+BASELINE_MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT,
+                                        "checkpoints/best_model_baseline.pth")
+RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
 # Model params
 NUM_FRAMES = 16
@@ -24,7 +27,7 @@ MOBILENET_FEATURES = 1280  # MobileNetV2 output features
 
 # Training params
 BATCH_SIZE = 8
-EPOCHS = 30
+EPOCHS = 2
 LEARNING_RATE = 0.001
 TRAIN_SPLIT = 0.8
 PATIENCE = 10

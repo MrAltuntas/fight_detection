@@ -18,13 +18,12 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 
 import config
-from models import ViolenceDetector
+from models import ViolenceDetector, MobileNetBaseline
 from data.dataset import get_dataloaders
 from utils.helpers import (
     get_device,
     save_checkpoint,
     load_checkpoint,
-    calculate_accuracy,
     plot_training_curves
 )
 
@@ -42,7 +41,7 @@ def set_seed(seed: int = 42) -> None:
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
     cudnn.deterministic = True
-    cudnn.benchmark = True  # Optimize for fixed input size (pre-processed tensors)
+    cudnn.benchmark = True
 
 
 def train_one_epoch(
@@ -138,8 +137,13 @@ def validate(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Train violence detection model')
+    parser = argparse.ArgumentParser(description='Train violence detection '
+                                                 'model')
 
+    parser.add_argument('--arch', type=str, default='lstm',
+                        choices=['lstm', 'baseline'],
+                        help='Model architecture: lstm (MobileNet+LSTM) '
+                             'or baseline (MobileNet only)')
     parser.add_argument('--resume', type=str, default=None,
                         help='Path to checkpoint to resume training from')
     args = parser.parse_args()
@@ -152,10 +156,6 @@ def main():
     device = get_device()
     print(f"Using device: {device}")
 
-    # Create checkpoint directory
-    checkpoint_dir = os.path.dirname(config.MODEL_SAVE_PATH)
-    os.makedirs(checkpoint_dir, exist_ok=True)
-
     # Create DataLoaders
     print("Loading datasets...")
     train_loader, val_loader = get_dataloaders(
@@ -166,16 +166,29 @@ def main():
     print(f"Val samples: {len(val_loader.dataset)}")
 
     # Initialize model
-    model = ViolenceDetector(
-        num_frames=config.NUM_FRAMES,
-        num_classes=config.NUM_CLASSES,
-        lstm_hidden=config.LSTM_HIDDEN
-    )
+    if args.arch == 'baseline':
+        model = MobileNetBaseline(
+            num_frames=config.NUM_FRAMES,
+            num_classes=config.NUM_CLASSES
+        )
+        save_path = config.BASELINE_MODEL_SAVE_PATH
+    else:
+        model = ViolenceDetector(
+            num_frames=config.NUM_FRAMES,
+            num_classes=config.NUM_CLASSES,
+            lstm_hidden=config.LSTM_HIDDEN
+        )
+        save_path = config.MODEL_SAVE_PATH
     model = model.to(device)
+
+    # Create checkpoint directory
+    checkpoint_dir = os.path.dirname(save_path)
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
     # Debug: Print parameter counts
     total_params = sum(p.numel() for p in model.parameters())
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    trainable_params = sum(p.numel() for p in model.parameters()
+                           if p.requires_grad)
     print(f"Total parameters: {total_params:,}")
     print(f"Trainable parameters: {trainable_params:,}")
     print(f"Frozen parameters: {total_params - trainable_params:,}")
@@ -193,7 +206,7 @@ def main():
         mode='max',
         factor=0.5,
         patience=3,
-        #verbose=True
+        # verbose=True
     )
 
     # Resume from checkpoint if specified
@@ -204,7 +217,8 @@ def main():
         metadata = load_checkpoint(model, args.resume, optimizer, device)
         start_epoch = metadata['epoch'] + 1
         best_val_acc = metadata['val_accuracy']
-        print(f"Resumed from epoch {metadata['epoch']}, val_acc: {best_val_acc:.4f}")
+        print(f"Resumed from epoch {metadata['epoch']}, val_acc: "
+              f"{best_val_acc:.4f}")
 
     # Training history
     train_losses = []
@@ -250,12 +264,13 @@ def main():
             save_checkpoint(
                 model, optimizer, epoch,
                 train_loss, val_loss, val_acc,
-                config.MODEL_SAVE_PATH
+                save_path
             )
             print(f"  -> Saved best model (val_acc: {val_acc:.4f})")
         else:
             patience_counter += 1
-            print(f"  -> No improvement. Patience: {patience_counter}/{config.PATIENCE}")
+            print(f"  -> No improvement. Patience: "
+                  f"{patience_counter}/{config.PATIENCE}")
 
         # Early stopping check
         if patience_counter >= config.PATIENCE:
@@ -265,11 +280,14 @@ def main():
     print("\n" + "=" * 60)
     print("Training Complete!")
     print(f"Best Validation Accuracy: {best_val_acc:.4f}")
-    print(f"Model saved to: {config.MODEL_SAVE_PATH}")
+    print(f"Model saved to: {save_path}")
 
     # Plot training curves
     if len(train_losses) > 0:
-        curves_path = os.path.join(checkpoint_dir, 'training_curves.png')
+        res_dir = os.path.join(config.RESULTS_DIR, args.arch)
+        os.makedirs(res_dir, exist_ok=True)
+        curves_path = os.path.join(res_dir, 'training_curves.png')
+        print(curves_path)
         plot_training_curves(
             train_losses, val_losses,
             train_accs, val_accs,

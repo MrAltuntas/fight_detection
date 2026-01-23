@@ -1,3 +1,3 @@
-from .model import ViolenceDetector
+from .model import ViolenceDetector, MobileNetBaseline
 
-__all__ = ["ViolenceDetector"]
+__all__ = ["ViolenceDetector", "MobileNetBaseline"]

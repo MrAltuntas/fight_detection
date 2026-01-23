@@ -1,3 +1,6 @@
 /data/processed/
 /data/raw/
 /.venv/
+/results/
+data/tensors/
+__pycache__/

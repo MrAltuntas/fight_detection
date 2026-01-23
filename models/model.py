@@ -4,7 +4,8 @@ from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
 
 
 class ViolenceDetector(nn.Module):
-    def __init__(self, num_frames=16, num_classes=2, lstm_hidden=512, dropout=0.5):
+    def __init__(self, num_frames=16, num_classes=2, lstm_hidden=512,
+                 dropout=0.5):
         super(ViolenceDetector, self).__init__()
 
         self.num_frames = num_frames
@@ -61,3 +62,33 @@ class ViolenceDetector(nn.Module):
         """Unfreeze CNN for fine-tuning"""
         for param in self.features.parameters():
             param.requires_grad = True
+
+
+class MobileNetBaseline(nn.Module):
+    def __init__(self, num_frames=16, num_classes=2):
+        super().__init__()
+
+        self.num_frames = num_frames
+
+        backbone = mobilenet_v2(pretrained=True)
+        self.feature_extractor = backbone.features
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        self.classifier = nn.Linear(1280, num_classes)
+
+        for p in self.feature_extractor.parameters():
+            p.requires_grad = False
+
+    def forward(self, x):
+        B, T, C, H, W = x.shape
+
+        x = x.view(B * T, C, H, W)
+        feats = self.feature_extractor(x)
+        feats = self.pool(feats).squeeze(-1).squeeze(-1)
+
+        feats = feats.view(B, T, -1)
+
+        video_feats = feats.mean(dim=1)
+
+        out = self.classifier(video_feats)
+        return out

@@ -27,7 +27,7 @@ MOBILENET_FEATURES = 1280  # MobileNetV2 output features
 
 # Training params
 BATCH_SIZE = 8
-EPOCHS = 2
+EPOCHS = 30
 LEARNING_RATE = 0.001
 TRAIN_SPLIT = 0.8
 PATIENCE = 10

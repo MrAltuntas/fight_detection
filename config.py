@@ -36,4 +36,4 @@ PATIENCE = 10
 CLASSES = ["nonfight", "fight"]
 
 # Kaggle API Token
-KAGGLE_API_TOKEN = "KGAT_7f803a846a569fe86806eca48e316343"
+KAGGLE_API_TOKEN = "*******"
